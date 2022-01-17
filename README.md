@@ -1,1 +1,1 @@
-# ruby_basics
+# Educational Repo for studying Ruby basics
