@@ -3,7 +3,7 @@
 class Train
   attr_reader :number, :type, :wagons, :speed, :route
 
-  def initialize(number = '222', type = 'cargo', wagons = 3)
+  def initialize(number, type, wagons)
     @number = number
     @type = type
     @wagons = wagons
@@ -41,7 +41,7 @@ class Train
   end
 
   def current_station
-    @route.show[@current_station_index]
+    @route.stations[@current_station_index]
   end
 
   def move_next_station
@@ -61,17 +61,17 @@ class Train
   end
 
   def next_station
-    @route.show[@current_station_index + 1]
+    @route.stations[@current_station_index + 1]
   end
 
   def prev_station
     return unless @current_station_index.positive?
 
-    @route.show[@current_station_index - 1]
+    @route.stations[@current_station_index - 1]
   end
 
   def last_station?
-    @current_station_index == @route.show.size - 1
+    @current_station_index == @route.stations.size - 1
   end
 
   def first_station?
