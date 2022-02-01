@@ -23,14 +23,17 @@ class Train
     @speed = 0
   end
 
-  def add_wagon
+  def add_wagon(wagon)
     return unless @speed.zero?
+    return unless wagon.attachable_wagon?(wagon)
 
-    @wagons += 1
+    @wagons << wagon
   end
 
-  def remove_wagon
-    @wagons -= 1 if @wagons.positive? && @speed.zero?
+  def remove_wagon(wagon)
+    return unless @speed.zero?
+
+    @wagons.delete(wagon)
   end
 
   def route=(route)
