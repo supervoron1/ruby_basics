@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
 class Train
-  attr_reader :number, :type, :wagons, :speed, :route
+  attr_reader :number, :wagons, :speed, :route
 
-  def initialize(number, type, wagons)
+  def initialize(number)
     @number = number
-    @type = type
-    @wagons = wagons
+    @wagons = []
     @speed = 0
     @current_station_index = 0
   end
