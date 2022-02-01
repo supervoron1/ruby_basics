@@ -25,7 +25,7 @@ class Train
 
   def add_wagon(wagon)
     return unless @speed.zero?
-    return unless wagon.attachable_wagon?(wagon)
+    return unless attachable_wagon?(wagon)
 
     @wagons << wagon
   end
