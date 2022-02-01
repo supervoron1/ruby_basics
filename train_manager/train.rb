@@ -59,6 +59,8 @@ class Train
     @current_station_index -= 1
   end
 
+  protected
+
   def next_station
     @route.stations[@current_station_index + 1]
   end
