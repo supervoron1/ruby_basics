@@ -23,9 +23,16 @@ class Main
     'Перемещать поезд по маршруту вперед и назад',
     'Просматривать список станций и список поездов на станции',
     'Посмотреть все станции, поезда и список созданных маршрутов',
-    'generate random data',
+    'seed data',
     'Выйти'
   ].freeze
+
+  def initialize
+    @trains = []
+    @stations = []
+    @routes = []
+    @wagons = []
+  end
 
   def start
     loop do
@@ -46,8 +53,9 @@ class Main
       when 6 then add_wagon_to_train
       when 7 then remove_wagon_from_train
       when 8 then move_train
-      when 9 then browse_trains_in_station
-      when 11 then generate_data
+      when 9 then show_trains_on_station
+      when 10 then statistics
+      when 11 then seed_data
       end
     end
   end
@@ -57,40 +65,280 @@ class Main
   end
 
   def show_main_menu
-    MENU_ITEMS.each.with_index(1) { |el, idx| puts "#{idx} - #{el}" }
+    MENU_ITEMS.each.with_index(1) { |item, index| puts "#{index} - #{item}" }
   end
 
+  def puts_stations
+    puts 'Список станций:'
+    @stations.each.with_index(1) do |station, index|
+      puts "#{index} - #{station.name}"
+    end
+  end
+
+  def puts_trains
+    puts 'Список поездов:'
+    @trains.each.with_index(1) do |train, index|
+      puts "#{index} - №#{train.number} - Тип: #{train.type} - Вагонов: #{train.wagons.size}"
+    end
+  end
+
+  def puts_routes
+    puts 'Список маршрутов:'
+    if @routes.empty?
+      puts 'Пока не заданы'
+    else
+      @routes.each.with_index(1) do |route, index|
+        route_stations = route.stations.map(&:name).join(' -> ')
+        puts "#{index} - #{route_stations}"
+      end
+    end
+  end
+
+  protected
+
   def create_station
-    puts 'create'
+    puts 'Создать станцию:'
+    print 'Название: '
+    station_name = gets.chomp
+
+    @stations << Station.new(station_name)
+
+    puts "Станция '#{station_name}' создана."
   end
 
   def create_train
+    loop do
+      puts 'Создать поезд:'
+      puts '1 - Пассажирский'
+      puts '2 - Грузовой'
+      print 'Тип: '
+      train_type = gets.to_i
+
+      next unless [1, 2].include?(train_type)
+
+      print 'Номер поезда: '
+      train_number = gets.chomp
+
+      if train_type == 1
+        @trains << PassengerTrain.new(train_number)
+        puts "Пассажирский поезд '#{train_number}' создан."
+      else
+        @trains << CargoTrain.new(train_number)
+        puts "Грузовой поезд '#{train_number}' создан."
+      end
+
+      break
+    end
+  end
+
+  def select_from_collection(collection)
+    index = gets.to_i - 1
+    return if index.negative?
+
+    collection[index]
   end
 
   def create_route
-  end
+    puts_stations
+    puts 'Выберите начальную станцию'
+    route_from = select_from_collection(@stations)
+    puts 'Выберите конечную станцию'
+    route_to = select_from_collection(@stations)
+    return if route_from.nil? || route_to.nil?
+    return if route_from == route_to
+
+    @routes << Route.new(route_from, route_to)
+    puts "Создан маршрут: #{route_from.name} -> #{route_to.name}."
   end
 
   def route_menu
+    loop do
+      puts '1 - Добавить промежуточную станцию'
+      puts '2 - Удалить промежуточную станцию'
+      puts '3 - Выйти'
+      print 'Выберите действие: '
+      route_menu_choice = gets.to_i
+
+      case route_menu_choice
+      when 1 then add_intermediate_station
+      when 2 then remove_intermediate_station
+      when 3 then break
+      else puts 'Простите, я Вас не понял'
+      end
+      puts_separator
+    end
+  end
+
+  def add_intermediate_station
+    if @routes.empty?
+      puts 'Сначала создайте маршрут'
+    else
+      puts 'Выберите маршрут для редактирования'
+      route = choose_route
+      if route.nil?
+        puts 'Такого маршрута не существует!'
+        return
+      end
+      puts 'Введите номер станции которую вы хотите добавить в маршрут'
+      puts_stations
+      station = select_from_collection(@stations)
+      if station.nil?
+        puts 'Такой станции не существует!'
+        return
+      end
+      route.add_station(station)
+      puts "Добавлена станция #{station.name} в маршрут: #{route.stations.map(&:name).join(' -> ')}."
+    end
+  end
+
+  def remove_intermediate_station
+    if @routes.empty?
+      puts 'Сначала создайте маршрут'
+    else
+      puts 'Выберите маршрут для редактирования'
+      route = choose_route
+      if route.nil?
+        puts 'Такого маршрута не существует!'
+        return
+      end
+      puts 'Введите номер станции которую вы хотите удалить из маршрута'
+      puts_stations
+      station = select_from_collection(@stations)
+      if station.nil?
+        puts 'Такой станции не существует!'
+        return
+      end
+      if route.first_station == station || route.last_station == station
+        puts 'Нельзя удалить начальную или конечную станции'
+        return
+      end
+      route.remove_station(station)
+      puts "Удалена станция #{station.name} из маршрута: #{route.stations.map(&:name).join(' -> ')}."
+    end
   end
 
   def set_route_to_train
+    puts 'Назначить маршрут:'
+    train = choose_train
+    if train.nil?
+      puts 'Такого поезда не существет!'
+      return
+    end
+    puts "Выбран поезд '#{train.number}'"
+    route = choose_route
+    if route.nil?
+      puts 'Такого маршрута не существет!'
+      return
+    end
+    train.route = route
+    puts "Поезду '#{train.number}' задан маршрут #{route.stations.map(&:name).join(' -> ')}."
   end
 
   def add_wagon_to_train
+    if @trains.empty?
+      puts 'Сначала создайте поезд!'
+      return
+    end
+    puts 'Выберите поезд для работы'
+    train = choose_train
+    case train
+    when CargoTrain then train.add_wagon(CargoWagon.new)
+    when PassengerTrain then train.add_wagon(PassengerWagon.new)
+    end
+    puts "Добавлен вагон к поезду № #{train.number}, Тип - #{train.type}"
+    puts "Теперь у поезда #{train.wagons.size} вагон/ов"
   end
 
   def remove_wagon_from_train
+    if @trains.empty?
+      puts 'Сначала создайте поезд!'
+      return
+    end
+    puts 'Выберите поезд для работы'
+    train = choose_train
+    wagon = train.wagons.last
+    train.remove_wagon(wagon)
+    puts "Отцеплен вагон от поезда № #{train.number}, Тип - #{train.type}"
+    puts "Теперь у поезда #{train.wagons.size} вагон/ов"
   end
 
   def move_train
+    puts 'Переместить поезд по маршруту:'
+    train = choose_train
+
+    if train.route.nil?
+      puts 'Поезду не присвоен маршрут!'
+    else
+      puts '1 - Вперед'
+      puts '2 - Назад'
+      print 'Выберите действие: '
+      train_action = gets.to_i
+
+      case train_action
+      when 1 then train.move_next_station
+      when 2 then train.move_prev_station
+      else puts 'Простите, я Вас не понял'
+      end
+    end
   end
 
-  def browse_trains_in_station
+  def show_trains_on_station
+    puts 'Выберите интересующую станцию:'
+    station = choose_station
+    puts "Список поездов на станции #{station.name}:"
+    if station.trains.any?
+      station.trains.each.with_index(1) { |train, index| puts "#{index} - #{train.number}, Тип - #{train.type}." }
+    else
+      puts "На станции #{station.name} поезда отсутствуют"
+    end
   end
 
-  def generate_data
+  def choose_route
+    puts_routes
+    print 'Выберите маршрут из списка: '
+    select_from_collection(@routes)
   end
+
+  def choose_train
+    puts_trains
+    print 'Выберите поезд из списка: '
+    select_from_collection(@trains)
+  end
+
+  def choose_station
+    puts_stations
+    print 'Выберите станцию из списка: '
+    select_from_collection(@stations)
+  end
+
+  def statistics
+    puts_routes
+    puts_stations
+    puts_trains
+  end
+
+  def generate_station
+    @stations << Station.new('Moscow')
+    @stations << Station.new('S.Petersburg')
+    @stations << Station.new('Samara')
+    @stations << Station.new('Perm')
+    @stations << Station.new('Smolensk')
+    @stations << Station.new('Minsk')
+  end
+
+  def generate_train
+    @trains << PassengerTrain.new(999)
+    @trains << PassengerTrain.new(555)
+    @trains << CargoTrain.new(777)
+  end
+
+  def seed_data
+    generate_station
+    generate_train
+    puts 'Trains and Stations seeded successfully'
+  end
+
+end
 
 rr = Main.new
 rr.start
