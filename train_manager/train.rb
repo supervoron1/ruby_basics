@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
+require_relative 'modules/manufacturer'
+
 class Train
+  include Manufacturer
+
   attr_reader :number, :wagons, :speed, :route
 
   def initialize(number)
