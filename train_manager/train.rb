@@ -7,11 +7,18 @@ class Train
 
   attr_reader :number, :wagons, :speed, :route
 
+  @@trains = {}
+
+  def self.find(number)
+    @@trains[number]
+  end
+
   def initialize(number)
     @number = number
     @wagons = []
     @speed = 0
     @current_station_index = 0
+    @@trains[number] << self
   end
 
   def speed_up(speed)
