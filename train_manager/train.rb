@@ -1,13 +1,33 @@
 # frozen_string_literal: true
 
+require_relative 'modules/manufacturer'
+require_relative 'modules/instance_counter'
+
 class Train
+  include Manufacturer
+  include InstanceCounter
+
   attr_reader :number, :wagons, :speed, :route
+
+  @@trains = {}
+
+  class << self
+    def find(number)
+      @@trains[number]
+    end
+
+    def all
+      @@trains
+    end
+  end
 
   def initialize(number)
     @number = number
     @wagons = []
     @speed = 0
     @current_station_index = 0
+    @@trains[number] = self
+    register_instance
   end
 
   def speed_up(speed)
