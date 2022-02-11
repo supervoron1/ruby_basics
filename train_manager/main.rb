@@ -9,9 +9,14 @@ require_relative 'wagon'
 require_relative 'cargo_wagon'
 require_relative 'passenger_wagon'
 
+# Main class
 class Main
   attr_reader :trains
 
+  INDEX_ERROR = 'Вы ввели недопустимое значение. Попробуйте еще раз.'
+  NOT_ENOUGH_STATIONS_ERROR = 'Сначала создайте станции, чтобы создавать маршруты (не менее 2)'
+  MIN_STATIONS_FOR_ROUTE_CREATION = 2
+  TRAIN_TYPE_MENU = %w[Пассажирский Грузовой].freeze
   MENU_ITEMS = [
     'Создавать станции',
     'Создавать поезда',
@@ -68,6 +73,10 @@ class Main
     MENU_ITEMS.each.with_index(1) { |item, index| puts "#{index} - #{item}" }
   end
 
+  def show_train_types_menu
+    TRAIN_TYPE_MENU.each.with_index(1) { |item, index| puts "#{index} - #{item}" }
+  end
+
   def puts_stations
     puts 'Список станций:'
     @stations.each.with_index(1) do |station, index|
@@ -100,55 +109,77 @@ class Main
     puts 'Создать станцию:'
     print 'Название: '
     station_name = gets.chomp
-
     @stations << Station.new(station_name)
-
     puts "Станция '#{station_name}' создана."
+  rescue StandardError => e
+    puts e
+    retry
   end
 
+  # Method has been refactored => legacy
+  # def create_train
+  #   loop do
+  #     puts 'Создать поезд:'
+  #     puts '1 - Пассажирский'
+  #     puts '2 - Грузовой'
+  #     print 'Тип: '
+  #     train_type = gets.to_i
+  #
+  #     next unless [1, 2].include?(train_type)
+  #
+  #     print 'Номер поезда: '
+  #     train_number = gets.chomp
+  #
+  #     if train_type == 1
+  #       @trains << PassengerTrain.new(train_number)
+  #       puts "Пассажирский поезд '#{train_number}' создан."
+  #     else
+  #       @trains << CargoTrain.new(train_number)
+  #       puts "Грузовой поезд '#{train_number}' создан."
+  #     end
+  #
+  #     break
+  #   end
+  # end
+
   def create_train
-    loop do
-      puts 'Создать поезд:'
-      puts '1 - Пассажирский'
-      puts '2 - Грузовой'
-      print 'Тип: '
-      train_type = gets.to_i
-
-      next unless [1, 2].include?(train_type)
-
-      print 'Номер поезда: '
-      train_number = gets.chomp
-
-      if train_type == 1
-        @trains << PassengerTrain.new(train_number)
-        puts "Пассажирский поезд '#{train_number}' создан."
-      else
-        @trains << CargoTrain.new(train_number)
-        puts "Грузовой поезд '#{train_number}' создан."
-      end
-
-      break
-    end
+    show_train_types_menu
+    print 'Какой поезд хотите создать? '
+    train_type = select_from_collection([CargoTrain, PassengerTrain])
+    print 'Номер поезда: '
+    train_number = gets.chomp
+    @trains << train_type.new(train_number)
+    puts "Создан поезд №#{train_number}, Тип: #{train_type}"
+  rescue StandardError => e
+    puts e
+    retry
   end
 
   def select_from_collection(collection)
     index = gets.to_i - 1
-    return if index.negative?
+    raise INDEX_ERROR unless index.between?(0, collection.size - 1)
 
     collection[index]
   end
 
   def create_route
-    puts_stations
-    puts 'Выберите начальную станцию'
-    route_from = select_from_collection(@stations)
-    puts 'Выберите конечную станцию'
-    route_to = select_from_collection(@stations)
-    return if route_from.nil? || route_to.nil?
-    return if route_from == route_to
-
-    @routes << Route.new(route_from, route_to)
-    puts "Создан маршрут: #{route_from.name} -> #{route_to.name}."
+    # raise NOT_ENOUGH_STATIONS_ERROR if @stations.length < 2
+    if @stations.length < MIN_STATIONS_FOR_ROUTE_CREATION
+      puts NOT_ENOUGH_STATIONS_ERROR
+    else
+      puts_stations
+      puts 'Выберите начальную станцию'
+      route_from = select_from_collection(@stations)
+      puts 'Выберите конечную станцию'
+      route_to = select_from_collection(@stations)
+      # return if route_from.nil? || route_to.nil?    # made via exceptions
+      # return if route_from == route_to
+      @routes << Route.new(route_from, route_to)
+      puts "Создан маршрут: #{route_from.name} -> #{route_to.name}."
+    end
+  rescue StandardError => e
+    puts e
+    retry
   end
 
   def route_menu
@@ -297,18 +328,27 @@ class Main
     puts_routes
     print 'Выберите маршрут из списка: '
     select_from_collection(@routes)
+  rescue StandardError => e
+    puts e
+    retry
   end
 
   def choose_train
     puts_trains
     print 'Выберите поезд из списка: '
     select_from_collection(@trains)
+  rescue StandardError => e
+    puts e
+    retry
   end
 
   def choose_station
     puts_stations
     print 'Выберите станцию из списка: '
     select_from_collection(@stations)
+  rescue StandardError => e
+    puts e
+    retry
   end
 
   def statistics
@@ -327,9 +367,9 @@ class Main
   end
 
   def generate_train
-    @trains << PassengerTrain.new(999)
-    @trains << PassengerTrain.new(555)
-    @trains << CargoTrain.new(777)
+    @trains << PassengerTrain.new('999-PS')
+    @trains << PassengerTrain.new('PAS-55')
+    @trains << CargoTrain.new('777-CG')
   end
 
   def seed_data
