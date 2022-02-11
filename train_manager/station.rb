@@ -7,6 +7,9 @@ class Station
   attr_accessor :trains
   attr_reader :name
 
+  EMPTY_NAME_ERROR = 'Станции не присвоено имя'
+  INVALID_NAME_ERROR = 'Слишком короткое имя станции. Должно быть не менее 3 символов'
+
   @@stations = []
 
   def self.all
@@ -15,9 +18,17 @@ class Station
 
   def initialize(name)
     @name = name
+    validate!
     @trains = []
     @@stations << self
     register_instance
+  end
+
+  def valid?
+    validate!
+    true
+  rescue StandardError
+    false
   end
 
   def accept_train(train)
@@ -35,5 +46,12 @@ class Station
 
   def show_trains_by_type(type)
     @trains.select { |train| train.type == type }
+  end
+
+  protected
+
+  def validate!
+    raise EMPTY_NAME_ERROR if name.empty?
+    raise INVALID_NAME_ERROR if name.length < 3
   end
 end

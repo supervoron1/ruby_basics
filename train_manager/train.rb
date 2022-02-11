@@ -3,11 +3,15 @@
 require_relative 'modules/manufacturer'
 require_relative 'modules/instance_counter'
 
+# Train class
 class Train
   include Manufacturer
   include InstanceCounter
 
   attr_reader :number, :wagons, :speed, :route
+
+  TRAIN_NUM_FORMAT = /^[0-9a-zа-я]{3}-?[0-9a-zа-я]{2}$/i.freeze
+  TRAIN_NUM_FORMAT_ERROR = 'Номер поезда введен в неверном формате (xxx-xx).'
 
   @@trains = {}
 
@@ -23,11 +27,19 @@ class Train
 
   def initialize(number)
     @number = number
+    validate!
     @wagons = []
     @speed = 0
     @current_station_index = 0
     @@trains[number] = self
     register_instance
+  end
+
+  def valid?
+    validate!
+    true
+  rescue StandardError
+    false
   end
 
   def speed_up(speed)
@@ -83,6 +95,10 @@ class Train
   end
 
   protected
+
+  def validate!
+    raise TRAIN_NUM_FORMAT_ERROR if number !~ TRAIN_NUM_FORMAT
+  end
 
   def next_station
     @route.stations[@current_station_index + 1]
