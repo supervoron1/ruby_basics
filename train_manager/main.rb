@@ -15,12 +15,14 @@ class Main
 
   INDEX_ERROR = 'Вы ввели недопустимое значение. Попробуйте еще раз.'
   NOT_ENOUGH_STATIONS_ERROR = 'Сначала создайте станции, чтобы создавать маршруты (не менее 2)'
+  NOT_DEFINED_ERROR = 'Пока не созданы'
   MIN_STATIONS_FOR_ROUTE_CREATION = 2
   TRAIN_TYPE_MENU = %w[Пассажирский Грузовой].freeze
   MENU_ITEMS = [
     'Создавать станции',
     'Создавать поезда',
     'Создавать маршруты',
+    'Создавать вагоны',
     'Управлять станциями в маршруте (добавлять, удалять)',
     'Назначать маршрут поезду',
     'Добавлять вагоны к поезду',
@@ -53,14 +55,15 @@ class Main
       when 1 then create_station
       when 2 then create_train
       when 3 then create_route
-      when 4 then route_menu
-      when 5 then set_route_to_train
-      when 6 then add_wagon_to_train
-      when 7 then remove_wagon_from_train
-      when 8 then move_train
-      when 9 then show_trains_on_station
-      when 10 then statistics
-      when 11 then seed_data
+      when 4 then create_wagon
+      when 5 then route_menu
+      when 6 then set_route_to_train
+      when 7 then add_wagon_to_train
+      when 8 then remove_wagon_from_train
+      when 9 then move_train
+      when 10 then show_trains_on_station
+      when 11 then statistics
+      when 12 then seed_data
       end
     end
   end
@@ -79,6 +82,7 @@ class Main
 
   def puts_stations
     puts 'Список станций:'
+    puts NOT_DEFINED_ERROR if @stations.empty?
     @stations.each.with_index(1) do |station, index|
       puts "#{index} - #{station.name}"
     end
@@ -86,6 +90,7 @@ class Main
 
   def puts_trains
     puts 'Список поездов:'
+    puts NOT_DEFINED_ERROR if @trains.empty?
     @trains.each.with_index(1) do |train, index|
       puts "#{index} - №#{train.number} - Тип: #{train.type} - Вагонов: #{train.wagons.size}"
     end
@@ -93,13 +98,19 @@ class Main
 
   def puts_routes
     puts 'Список маршрутов:'
-    if @routes.empty?
-      puts 'Пока не заданы'
-    else
-      @routes.each.with_index(1) do |route, index|
-        route_stations = route.stations.map(&:name).join(' -> ')
-        puts "#{index} - #{route_stations}"
-      end
+    raise NOT_DEFINED_ERROR if @routes.empty?
+
+    @routes.each.with_index(1) do |route, index|
+      route_stations = route.stations.map(&:name).join(' -> ')
+      puts "#{index} - #{route_stations}"
+    end
+  end
+
+  def puts_wagons
+    puts 'Список вагонов:'
+    puts NOT_DEFINED_ERROR if @wagons.empty?
+    @wagons.each.with_index(1) do |wagon, index|
+      puts "#{index} - №#{wagon.number} - Тип: #{wagon.type} - Объем: (free/total) #{wagon.free_volume}/#{wagon.capacity}"
     end
   end
 
@@ -182,6 +193,21 @@ class Main
     retry
   end
 
+  def create_wagon
+    show_train_types_menu
+    print 'Какой тип вагона хотите создать: '
+    wagon_type = select_from_collection([PassengerWagon, CargoWagon])
+    print 'Номер вагона: '
+    wagon_number = gets.chomp
+    print 'Задайте объем вагона: '
+    wagon_capacity = gets.to_i
+    @wagons << wagon_type.new(wagon_number, wagon_capacity)
+    puts "Создан вагон №#{wagon_number}, Тип: #{wagon_type}, Свободный объем: #{wagon_capacity}"
+  rescue StandardError => e
+    puts e
+    retry
+  end
+
   def route_menu
     loop do
       puts '1 - Добавить промежуточную станцию'
@@ -250,17 +276,13 @@ class Main
 
   def set_route_to_train
     puts 'Назначить маршрут:'
-    train = choose_train
-    if train.nil?
-      puts 'Такого поезда не существет!'
+    if @routes.empty? || @trains.empty?
+      puts 'Сначала создайте маршрут и поезд!'
       return
     end
+    train = choose_train
     puts "Выбран поезд '#{train.number}'"
     route = choose_route
-    if route.nil?
-      puts 'Такого маршрута не существет!'
-      return
-    end
     train.route = route
     puts "Поезду '#{train.number}' задан маршрут #{route.stations.map(&:name).join(' -> ')}."
   end
@@ -272,12 +294,17 @@ class Main
     end
     puts 'Выберите поезд для работы'
     train = choose_train
-    case train
-    when CargoTrain then train.add_wagon(CargoWagon.new)
-    when PassengerTrain then train.add_wagon(PassengerWagon.new)
-    end
-    puts "Добавлен вагон к поезду № #{train.number}, Тип - #{train.type}"
+    puts 'Выберите вагон для работы'
+    wagon = choose_wagon
+    raise INDEX_ERROR unless train.attachable_wagon?(wagon)
+
+    train.add_wagon(wagon)
+    puts "К поезду № #{train.number} добавлен вагон № #{wagon.number}, Тип - #{wagon.type}, Общий объем - #{wagon.capacity}"
     puts "Теперь у поезда #{train.wagons.size} вагон/ов"
+    train.each_wagon { |wagon| puts "№#{wagon.number} - Объем: (free/total) #{wagon.free_volume}/#{wagon.capacity}" }
+  rescue StandardError => e
+    puts e
+    retry
   end
 
   def remove_wagon_from_train
@@ -291,6 +318,7 @@ class Main
     train.remove_wagon(wagon)
     puts "Отцеплен вагон от поезда № #{train.number}, Тип - #{train.type}"
     puts "Теперь у поезда #{train.wagons.size} вагон/ов"
+    train.each_wagon { |wagon| puts "№#{wagon.number} - Объем: (free/total) #{wagon.free_volume}/#{wagon.capacity}" }
   end
 
   def move_train
@@ -318,7 +346,12 @@ class Main
     station = choose_station
     puts "Список поездов на станции #{station.name}:"
     if station.trains.any?
-      station.trains.each.with_index(1) { |train, index| puts "#{index} - #{train.number}, Тип - #{train.type}." }
+      station.each_train do |train, index|
+        puts "#{index}: Поезд №#{train.number}, Тип - #{train.type}, Вагонов - #{train.wagons.length}:"
+        train.each_wagon { |wagon| puts "№#{wagon.number} - Объем: (free/total) #{wagon.free_volume}/#{wagon.capacity}" }
+      end
+      # refactored thru `each.train` & `each_wagon` methods passed with block
+      # station.trains.each.with_index(1) { |train, index| puts "#{index} - #{train.number}, Type - #{train.type}." }
     else
       puts "На станции #{station.name} поезда отсутствуют"
     end
@@ -351,10 +384,20 @@ class Main
     retry
   end
 
+  def choose_wagon
+    puts_wagons
+    print 'Выберите вагон из списка: '
+    select_from_collection(@wagons)
+  rescue StandardError => e
+    puts e
+    retry
+  end
+
   def statistics
     puts_routes
     puts_stations
     puts_trains
+    puts_wagons
   end
 
   def generate_station
@@ -372,10 +415,23 @@ class Main
     @trains << CargoTrain.new('777-CG')
   end
 
+  def generate_wagons
+    @wagons << PassengerWagon.new('11-999', 3)
+    @wagons << PassengerWagon.new('99-888', 5)
+    @wagons << CargoWagon.new('22-777', 220)
+    @wagons << CargoWagon.new('55-222', 550)
+  end
+
+  def generate_routes
+    @routes << Route.new(@stations.first, @stations.last)
+  end
+
   def seed_data
     generate_station
     generate_train
-    puts 'Trains and Stations seeded successfully'
+    generate_wagons
+    generate_routes
+    puts 'Trains, Stations, Routes and Wagons seeded successfully'
   end
 
 end
