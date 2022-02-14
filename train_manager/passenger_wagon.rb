@@ -9,4 +9,6 @@ class PassengerWagon < Wagon
   def take_volume
     super(1)
   end
+
+  alias take_seat take_volume
 end

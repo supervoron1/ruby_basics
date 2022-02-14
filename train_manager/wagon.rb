@@ -27,6 +27,10 @@ class Wagon
     @capacity - @taken_volume
   end
 
+  def free_volume?
+    free_volume.positive?
+  end
+
   protected
 
   def validate!

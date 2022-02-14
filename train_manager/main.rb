@@ -27,6 +27,7 @@ class Main
     'Назначать маршрут поезду',
     'Добавлять вагоны к поезду',
     'Отцеплять вагоны от поезда',
+    'Занять объем/место в вагоне',
     'Перемещать поезд по маршруту вперед и назад',
     'Просматривать список станций и список поездов на станции',
     'Посмотреть все станции, поезда и список созданных маршрутов',
@@ -60,10 +61,11 @@ class Main
       when 6 then set_route_to_train
       when 7 then add_wagon_to_train
       when 8 then remove_wagon_from_train
-      when 9 then move_train
-      when 10 then show_trains_on_station
-      when 11 then statistics
-      when 12 then seed_data
+      when 9 then occupy_wagon
+      when 10 then move_train
+      when 11 then show_trains_on_station
+      when 12 then statistics
+      when 13 then seed_data
       end
     end
   end
@@ -319,6 +321,35 @@ class Main
     puts "Отцеплен вагон от поезда № #{train.number}, Тип - #{train.type}"
     puts "Теперь у поезда #{train.wagons.size} вагон/ов"
     train.each_wagon { |wagon| puts "№#{wagon.number} - Объем: (free/total) #{wagon.free_volume}/#{wagon.capacity}" }
+  end
+
+  def occupy_wagon
+    puts 'Выберите вагон для работы'
+    wagon = choose_wagon
+    occupy_passenger_wagon(wagon) if wagon.is_a?(PassengerWagon)
+    occupy_cargo_wagon(wagon) if wagon.is_a?(CargoWagon)
+  end
+
+  def occupy_passenger_wagon(wagon)
+    raise INDEX_ERROR unless wagon.free_volume?
+
+    wagon.take_seat
+    puts_separator
+    puts "Занято 1 место в вагоне №#{wagon.number}. Свободных мест: #{wagon.free_volume}"
+  rescue StandardError => e
+    puts e
+  end
+
+  def occupy_cargo_wagon(wagon)
+    puts 'Введите объем загрузки'
+    volume = gets.to_i.abs
+    raise INDEX_ERROR unless volume <= wagon.free_volume
+
+    wagon.take_volume(volume)
+    puts_separator
+    puts "Загружен объем: #{volume} в вагон №#{wagon.number}. Свободный объем: #{wagon.free_volume}"
+  rescue StandardError => e
+    puts e
   end
 
   def move_train
