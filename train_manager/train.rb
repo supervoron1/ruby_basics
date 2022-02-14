@@ -11,7 +11,7 @@ class Train
   attr_reader :number, :wagons, :speed, :route
 
   TRAIN_NUM_FORMAT = /^[0-9a-zа-я]{3}-?[0-9a-zа-я]{2}$/i.freeze
-  TRAIN_NUM_FORMAT_ERROR = 'Номер поезда введен в неверном формате (xxx-xx).'
+  TRAIN_NUM_FORMAT_ERROR = 'Номер поезда введен в неверном формате (999-AA).'
 
   @@trains = {}
 
@@ -92,6 +92,10 @@ class Train
     current_station.send_train(self)
     prev_station.accept_train(self)
     @current_station_index -= 1
+  end
+
+  def each_wagon(&block)
+    @wagons.each(&block) if block_given?
   end
 
   protected
