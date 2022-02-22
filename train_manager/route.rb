@@ -1,8 +1,16 @@
 # frozen_string_literal: true
 
+require_relative 'modules/validation'
+
 # Route class
 class Route
+  include Validation
   attr_reader :first_station, :last_station, :intermediate_stations
+  validate :first_station, :type, Station
+  validate :first_station, :format, Station::STATION_NAME_FORMAT
+  validate :last_station, :type, Station
+  validate :last_station, :format, Station::STATION_NAME_FORMAT
+
 
   FIRST_STATION_MISSING_ERROR = 'Не задана начальная станция! Попробуйте еще раз.'
   LAST_STATION_MISSING_ERROR = 'Не задана конечная станция! Попробуйте еще раз.'

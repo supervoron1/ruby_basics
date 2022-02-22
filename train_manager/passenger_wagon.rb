@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# passengerWagon class definition
 class PassengerWagon < Wagon
   def initialize(number, capacity)
     super(number, capacity)

@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require_relative 'modules/manufacturer'
+# require_relative 'modules/validation'
 
 class Wagon
   include Manufacturer
+  # include Validation
 
   WAGON_CAPACITY_ERROR = 'Не задан объем вагона!'
   WAGON_NUMBER_ERROR = 'Номер вагона введен в неверном формате (99-999).'
@@ -11,6 +13,8 @@ class Wagon
 
   attr_accessor :capacity, :taken_volume
   attr_reader :number, :type
+
+  # validate :number, :format, WAGON_NUM_FORMAT
 
   def initialize(number, capacity)
     @number = number

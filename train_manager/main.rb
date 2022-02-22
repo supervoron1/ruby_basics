@@ -433,7 +433,7 @@ class Main
 
   def generate_station
     @stations << Station.new('Moscow')
-    @stations << Station.new('S.Petersburg')
+    @stations << Station.new('S_Petersburg')
     @stations << Station.new('Samara')
     @stations << Station.new('Perm')
     @stations << Station.new('Smolensk')
